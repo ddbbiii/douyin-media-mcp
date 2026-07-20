@@ -83,6 +83,12 @@ Claude Desktop 可使用等价的 stdio 配置：
 }
 ```
 
+## KeyHub 本机配置
+
+项目包含 [`.keyhub.json`](.keyhub.json)，可以扫描或添加到 KeyHub Project Desk。KeyHub 只管理本机浏览器模式、CDP 附着和是否临时使用 Cookie 等可选运行参数；它不会保存或导出浏览器 Cookie、下载结果或临时签名地址。
+
+这是 stdio MCP，不应在 KeyHub 中孤立常驻启动。应由 Codex、Claude Code 或 Claude Desktop 按上面的 MCP 配置启动，并由 KeyHub 提供已绑定的项目环境变量。具体注册和开关说明见 [docs/KEYHUB.md](docs/KEYHUB.md)。
+
 ## 浏览器模式
 
 默认启动本机 Chrome 的独立临时上下文并显示浏览器窗口。可通过环境变量调整：

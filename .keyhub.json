@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "project_id": "douyin-media-mcp",
+  "display_name": "Douyin Media MCP",
+  "required_environment": [],
+  "optional_environment": [
+    "DOUYIN_MCP_BROWSER_HEADLESS",
+    "DOUYIN_MCP_BROWSER_CHANNEL",
+    "DOUYIN_MCP_BROWSER_PROFILE",
+    "DOUYIN_MCP_CDP_URL",
+    "DOUYIN_MCP_USE_BROWSER_COOKIES"
+  ],
+  "default_command": "uv run douyin-media-mcp",
+  "readiness_checks": [
+    {
+      "label": "Python 项目定义",
+      "path": "pyproject.toml"
+    },
+    {
+      "label": "依赖锁定文件",
+      "path": "uv.lock"
+    },
+    {
+      "label": "MCP 服务源码",
+      "path": "src/douyin_media_mcp"
+    },
+    {
+      "label": "本地虚拟环境",
+      "path": ".venv",
+      "optional": true
+    }
+  ]
+}
