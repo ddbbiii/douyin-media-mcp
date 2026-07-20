@@ -31,14 +31,47 @@ KeyHub 会检查项目定义、锁文件和 MCP 源码。`.venv` 仅作为可选
 | `DOUYIN_MCP_CDP_URL` | 不附着 | 需要附着到你已启动的 Chromium 时填写本地地址，例如 `http://127.0.0.1:9222`。 |
 | `DOUYIN_MCP_USE_BROWSER_COOKIES` | `false` | 仅在站点确实要求且你同意时设为 `1`；Cookie 只在内存使用，不写入 manifest、日志或 Git。 |
 
-这些值是本机运行参数，不需要部署到服务器，也不需要导出 `.env`。若需要让 Codex 或 Claude 使用同一套设置，由 KeyHub 以项目环境变量注入它们的启动命令即可。
+这些值是本机运行参数，不需要部署到服务器，也不需要导出 `.env`。用下节的 `keyhub run` 包装命令启动 MCP 后，KeyHub 会把已绑定的值作为子进程环境变量注入；未绑定的变量继续使用上表默认值。
 
 ## MCP 客户端配置
 
-KeyHub 不替代 MCP 客户端。客户端仍使用以下命令启动服务器：
+KeyHub 不替代 MCP 客户端。不要点击 KeyHub 的普通“启动项目”按钮启动这个 stdio 服务；改为让客户端通过 `keyhub run` 包装启动服务器。这样 KeyHub 才能在启动时注入项目开关。
+
+先确保 `keyhub` CLI 已在系统 `PATH` 中；否则在下面的 `command` 位置填写 KeyHub CLI 的绝对路径。
+
+Codex 的 `config.toml`：
+
+```toml
+[mcp_servers.douyin-media]
+command = "keyhub"
+args = ["run", "--project", "douyin-media-mcp", "--", "uv", "--directory", "<repository-path>", "run", "douyin-media-mcp"]
+startup_timeout_sec = 30
+tool_timeout_sec = 1800
+```
+
+Claude Code：
+
+```powershell
+claude mcp add douyin-media -- keyhub run --project douyin-media-mcp -- uv --directory <repository-path> run douyin-media-mcp
+```
+
+Claude Desktop 可使用等价的 stdio 配置：
+
+```json
+{
+  "mcpServers": {
+    "douyin-media": {
+      "command": "keyhub",
+      "args": ["run", "--project", "douyin-media-mcp", "--", "uv", "--directory", "<repository-path>", "run", "douyin-media-mcp"]
+    }
+  }
+}
+```
+
+不使用 KeyHub 时，客户端也可以直接使用以下命令启动服务器：
 
 ```powershell
 uv --directory "<repository-path>" run douyin-media-mcp
 ```
 
-Codex 和 Claude 的配置示例见 [README](../README.md#MCP-客户端配置)。在 KeyHub 中点击“启动项目”只适用于可独立常驻的项目；本项目是 stdio MCP，应该通过上述客户端配置使用，避免启动一个无法接收工具调用的孤立进程。
+包装方式不写入任何 Cookie、临时签名 URL 或下载媒体；KeyHub 只向 MCP 子进程传递用户显式绑定的配置值。
