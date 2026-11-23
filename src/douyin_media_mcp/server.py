@@ -50,8 +50,9 @@ async def download_douyin_media(
 ) -> dict[str, Any]:
     """Download, stream-copy mux, probe, decode-check, and hash authorized Douyin media.
 
-    If no independent audio stream is captured, a validated video-only file is returned with
-    media_mode="video_only" and an explicit warning. Signed URLs are never exposed.
+    Audio can be independent or embedded in the selected video stream; both are preserved.
+    A validated video-only file is returned only when the final media actually has no audio.
+    Signed URLs are never exposed.
     """
     try:
         return await _service().download(

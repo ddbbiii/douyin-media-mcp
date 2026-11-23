@@ -12,7 +12,12 @@ from .config import Settings
 from .downloader import StreamDownloader
 from .errors import MediaMCPError, safe_error
 from .manifest import write_manifest
-from .media_tools import mux_streams, probe_media_file
+from .media_tools import (
+    extract_audio_stream,
+    extract_video_stream,
+    mux_streams,
+    probe_media_file,
+)
 from .models import ProbeResult, ResolvedMedia
 from .resolvers import BrowserResolver
 from .url_utils import expand_share_url
@@ -100,15 +105,31 @@ class DouyinMediaService:
             separate_paths: dict[str, str] = {}
             if keep_separate_streams:
                 video_copy = output_path.with_suffix(".video.mp4")
-                shutil.copy2(streams.video_path, video_copy)
+                await asyncio.to_thread(
+                    extract_video_stream,
+                    streams.video_path,
+                    video_copy,
+                    ffmpeg_path=self.settings.ffmpeg_path,
+                    overwrite=overwrite,
+                )
                 separate_paths = {"video_path": str(video_copy)}
                 if streams.audio_path is not None:
                     audio_copy = output_path.with_suffix(".audio.m4a")
                     shutil.copy2(streams.audio_path, audio_copy)
                     separate_paths["audio_path"] = str(audio_copy)
+                elif probe.audio_codec is not None:
+                    audio_copy = output_path.with_suffix(".audio.m4a")
+                    await asyncio.to_thread(
+                        extract_audio_stream,
+                        streams.video_path,
+                        audio_copy,
+                        ffmpeg_path=self.settings.ffmpeg_path,
+                        overwrite=overwrite,
+                    )
+                    separate_paths["audio_path"] = str(audio_copy)
 
         warnings = list(resolved.warnings)
-        if audio is None:
+        if probe.media_mode == "video_only":
             warnings.append("未捕获到独立音频流，结果为无声视频。")
 
         manifest = {
@@ -123,6 +144,13 @@ class DouyinMediaService:
             "selected_streams": {
                 "video": video.public_summary(),
                 "audio": audio.public_summary() if audio else None,
+                "audio_source": (
+                    "separate_stream"
+                    if audio is not None
+                    else "embedded_in_video_stream"
+                    if probe.audio_codec is not None
+                    else "not_found"
+                ),
             },
             "probe": probe.model_dump(mode="json"),
             "media_mode": probe.media_mode,
@@ -145,6 +173,13 @@ class DouyinMediaService:
             "size_bytes": probe.size_bytes,
             "sha256": probe.sha256,
             "resolver_used": resolved.resolver_used,
+            "audio_source": (
+                "separate_stream"
+                if audio is not None
+                else "embedded_in_video_stream"
+                if probe.audio_codec is not None
+                else "not_found"
+            ),
             "warnings": warnings,
             **separate_paths,
         }
