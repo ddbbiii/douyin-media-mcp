@@ -44,9 +44,12 @@
 - `size_bytes`
 - `sha256`
 - `resolver_used`
+- `audio_source: "separate_stream" | "embedded_in_video_stream" | "not_found"`
 - `warnings`
 
-只有下载、封装和验收全部完成时才返回 `status: "completed"`。如果没有捕获到独立音频流，仍可返回经过验收的无声视频，此时 `media_mode` 为 `video_only`、`audio_codec` 为 `null`，并在 `warnings` 中明确说明。
+设置 `keep_separate_streams=true` 时，若音频嵌在视频流中，MCP 会无损额外导出 `<filename>.audio.m4a`。
+
+只有下载、封装和验收全部完成时才返回 `status: "completed"`。作品可能把 AAC 音轨直接封装在视频候选流中，即使没有独立音频候选也应保留该音轨；只有最终文件确实没有音轨时，才返回 `media_mode: "video_only"`、`audio_codec: null` 并给出警告。
 
 `quality` 是候选选择偏好而不是平台清晰度保证；调用方必须读取返回的 `width` 和 `height` 获取实际结果。
 

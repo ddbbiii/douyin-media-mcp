@@ -41,6 +41,10 @@ def mux_streams(
     command.extend(["-map", "0:v:0"])
     if audio_path is not None:
         command.extend(["-map", "1:a:0"])
+    else:
+        # Some Douyin candidates are muxed AV files even when the page exposes
+        # no separate audio URL. Preserve that in-band soundtrack.
+        command.extend(["-map", "0:a:0?"])
     command.extend(
         ["-c", "copy", "-movflags", "+faststart", "-f", "mp4", str(temporary)]
     )
@@ -48,6 +52,87 @@ def mux_streams(
     if result.returncode != 0 or not temporary.exists():
         temporary.unlink(missing_ok=True)
         raise MediaMCPError("MUX_FAILED", f"FFmpeg 封装失败：{_safe_process_error(result)}")
+    os.replace(temporary, output_path)
+    return output_path
+
+
+def extract_audio_stream(
+    source_path: Path,
+    output_path: Path,
+    *,
+    ffmpeg_path: str = "ffmpeg",
+    overwrite: bool = False,
+) -> Path:
+    binary = shutil.which(ffmpeg_path)
+    if binary is None:
+        raise MediaMCPError("FFMPEG_NOT_FOUND", "没有找到 FFmpeg 可执行文件。")
+    if output_path.exists() and not overwrite:
+        raise MediaMCPError("DOWNLOAD_FAILED", "目标文件已存在，且 overwrite=false。")
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = output_path.with_name(f".{output_path.name}.extracting")
+    result = _run(
+        [
+            binary,
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-y",
+            "-i",
+            str(source_path),
+            "-map",
+            "0:a:0",
+            "-c",
+            "copy",
+            "-f",
+            "ipod",
+            str(temporary),
+        ]
+    )
+    if result.returncode != 0 or not temporary.exists():
+        temporary.unlink(missing_ok=True)
+        raise MediaMCPError("MUX_FAILED", f"音轨提取失败：{_safe_process_error(result)}")
+    os.replace(temporary, output_path)
+    return output_path
+
+
+def extract_video_stream(
+    source_path: Path,
+    output_path: Path,
+    *,
+    ffmpeg_path: str = "ffmpeg",
+    overwrite: bool = False,
+) -> Path:
+    binary = shutil.which(ffmpeg_path)
+    if binary is None:
+        raise MediaMCPError("FFMPEG_NOT_FOUND", "没有找到 FFmpeg 可执行文件。")
+    if output_path.exists() and not overwrite:
+        raise MediaMCPError("DOWNLOAD_FAILED", "目标文件已存在，且 overwrite=false。")
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = output_path.with_name(f".{output_path.name}.extracting")
+    result = _run(
+        [
+            binary,
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-y",
+            "-i",
+            str(source_path),
+            "-map",
+            "0:v:0",
+            "-an",
+            "-c:v",
+            "copy",
+            "-movflags",
+            "+faststart",
+            "-f",
+            "mp4",
+            str(temporary),
+        ]
+    )
+    if result.returncode != 0 or not temporary.exists():
+        temporary.unlink(missing_ok=True)
+        raise MediaMCPError("MUX_FAILED", f"视频流提取失败：{_safe_process_error(result)}")
     os.replace(temporary, output_path)
     return output_path
 

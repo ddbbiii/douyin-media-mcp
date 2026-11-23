@@ -68,6 +68,15 @@
 - 登录、验证码和访问受限内容不能自动绕过；应返回明确的 `AUTH_REQUIRED` 或 `HUMAN_ACTION_REQUIRED`。
 - 一次成功不能证明任意链接长期可用；发布前需要短视频、长视频、无登录、需登录和音视频分离等回归矩阵。音频捕获失败不再阻断视频下载，但不能伪装成完整音视频结果。
 
+## 2026-11-24：内嵌音轨保留回归
+
+对两条用户提供的短视频链接执行 MCP 下载后，发现浏览器捕获到的视频候选本身含 H.264 + AAC，但 FFmpeg 映射只选了 `0:v:0`，导致最终文件丢失 AAC，并被错误报告为 `video_only`。修复后，当没有独立音频候选时，封装会可选映射原视频候选中的 `0:a:0`；警告以最终 FFprobe 结果为准。
+
+- 31.467 秒样本：1080×1920、H.264 + AAC；`audio_source=embedded_in_video_stream`。
+- 40.067 秒样本：1080×1920、H.264 + AAC；`audio_source=embedded_in_video_stream`。
+- `keep_separate_streams=true` 时，两条样本都额外产出并验收纯 H.264 `.video.mp4` 与 AAC `.audio.m4a`。
+- 下载内容仅用于用户要求的内部参考，不进入 Git。
+
 ## 不得持久化的敏感数据
 
 - Cookie、localStorage、sessionStorage
